@@ -1,0 +1,11 @@
+# Median of two lists
+
+Find the median of the collective values in two sorted lists, each of size `m` and `n` respectively
+
+Runtime should be max O(log(n+m))
+
+## Notes
+
+Runtime will be O(n+m).  If the lists weren't already sorted, the necessary sorting would be O(n+m)
+
+Space complexity will be O(n+m), and no array allocations will be performed
