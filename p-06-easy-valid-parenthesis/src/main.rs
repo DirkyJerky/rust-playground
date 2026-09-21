@@ -1,5 +1,13 @@
+use nom::{
+    IResult, Parser,
+    bytes::complete::tag,
+    character::complete::one_of,
+    combinator::{all_consuming, complete},
+    multi::many0,
+};
+
 /// Types of valid parentheses
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
 enum Parenthesis {
     /// '(' or ')'
     Round,
@@ -37,9 +45,54 @@ fn is_correct_parentheses(str: &str) -> bool {
     state.len() == 0
 }
 
+#[derive(Debug)]
+struct ParsedParentheses {
+    paren_type: Parenthesis,
+    children: Vec<ParsedParentheses>,
+}
+
+fn single_open_parenthesis_parser(input: &str) -> IResult<&str, Parenthesis> {
+    one_of("([{")
+        .map(|res| match res {
+            '(' => Parenthesis::Round,
+            '[' => Parenthesis::Box,
+            '{' => Parenthesis::Brace,
+            _ => panic!("unexpected char: {res}"),
+        })
+        .parse(input)
+}
+
+fn single_closed_parenthesis_parser(paren: Parenthesis) -> impl Fn(&str) -> IResult<&str, &str> {
+    move |input: &str| {
+        match paren {
+            Parenthesis::Round => tag(")"),
+            Parenthesis::Box => tag("]"),
+            Parenthesis::Brace => tag("}"),
+        }
+        .parse(input)
+    }
+}
+
+/// Self-referential `nom` parser for multiple possibly-nested parenthesis
+fn parentheses_parser(input: &str) -> IResult<&str, Vec<ParsedParentheses>> {
+    complete(many0(single_open_parenthesis_parser.flat_map(
+        |opening_paren| {
+            parentheses_parser
+                .and(single_closed_parenthesis_parser(opening_paren))
+                .map(move |(children, _closing_paren)| ParsedParentheses {
+                    paren_type: opening_paren,
+                    children,
+                })
+        },
+    )))
+    .parse(input)
+}
+
 /// Alternate solution, works by using a self-referential `nom` parser to verify correctness
 fn is_correct_parentheses_v2(str: &str) -> bool {
-    unimplemented!()
+    let res = all_consuming(parentheses_parser).parse(str);
+    dbg!(&res);
+    res.is_ok()
 }
 
 #[cfg(test)]
@@ -54,10 +107,16 @@ mod tests {
             ("(]", false),
             ("([])", true),
             ("([)]", false),
+            ("()([](){{}{[]([[]{()}{}()])}})", true),
         ];
 
         for (input, output) in cases {
-            assert_eq!(is_correct_parentheses(input), output, "{input} -> {output}")
+            assert_eq!(is_correct_parentheses(input), output, "{input} -> {output}");
+            assert_eq!(
+                is_correct_parentheses_v2(input),
+                output,
+                "{input} -> {output}"
+            )
         }
     }
 }
