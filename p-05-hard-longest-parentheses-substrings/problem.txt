@@ -1,0 +1,27 @@
+# Longest valid parenthesis
+
+Given a string containing just the characters '(' and ')', return the length of the longest valid (well-formed) parenthesis substring.
+
+## Example 1
+
+> Input: "(()"
+> Output: 2
+> Explanation: THe longest valid substring is "()"
+
+## Example 2
+
+> Input: ")()())"
+> Output: 4
+> Explanation: THe longest valid substring is "()()"
+
+## Example 3
+
+> Input: ""
+> Output: 0
+> Explanation: THe longest valid substring is ""
+
+## Example 4
+
+> Input: "((()))))()(()())((()))("
+> Output: 14
+> Explanation: THe longest valid substring is "()(()())((()))"
