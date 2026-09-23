@@ -1,10 +1,10 @@
 mod trapped_water_problem;
 
-use trapped_water_problem::TrappedWaterProblem;
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use trapped_water_problem::TrappedWaterProblem;
 
     #[test]
     fn test_cases() {
