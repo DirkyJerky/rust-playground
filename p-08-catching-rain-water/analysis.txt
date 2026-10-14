@@ -1,0 +1,36 @@
+Here, I use the following terms:
+
+"pool" refers to a single contiguous set of filled water, with a constant upper height that is necessarily equal to the height of at least one of the left and/or right edges of the pool.
+
+"edges" of a pool refer to the left-to-right sequence of heights that contain a pool, where each height on one side of the pool is less than or equal to the pool height (considered the "height defining" edge), and the heights on the other side are greater or equal.  The edge sequence shall be maximum in size.  For example: in the problem space of [3,4,2,1,2], then the problem describes a single pool of height 2 with its edges.
+  - Note that this definition distinguishes between a pool and its edges, and allows for edge-interval definitions for pools to overlap
+
+"adjacent pools" refers to a set of one or more pools where no other pool exists between any two members, horizontally.
+
+From observing properties of solutions, one can ascertain the following properties.
+- If any pools exist, There will exist at least one or more pools with a maximum height
+- If one or more maximal pools do exist, they must be adjacent
+  - Proof by contrapositive:  If there is one maximal pool, it is necessarily adjacent.  If there existed any two maximal pools that were not adjacent:
+    1. There exists a pool between them of a lesser height, which does not hold under the problem description, because that pool would necessarily "fill higher" to at least meet the height of the two pools that surround it.  So the lesser pool cannot exist.
+    2. There exists a pool between them of an equal height, but this pool would be maximal too, so the pools are all maximal and adjacent.
+    3. There exists a pool between them of an greater height, but then the two maximal pools aren't maximal.
+- Any pools to the left of these maximal pool(s) will necessarily be monotonically non-decreasing in height.
+  - Proof by contrapositive:
+    - We note that all "left pools" have a lesser height than the maximum.
+    - If there did exist a decreasing pools size in the sequence, say [_, ..., A, B, ..., M] (A > B), then by the problem definition, pool B would necessarily "fill higher" to at least meet the height of pool A, because the edges that define A and M are higher and surround pool B.  So pool B cannot exist.
+- All pools to the left of the maximal pool will take the height of their left-most defining edge.
+  - Proof by contrapositive:
+    - If this wasn't true, then the pool wall to the left must necessarily be greater than the pool height, but because the maximal pool wall exists somewhere to the right of this pool, the pool would necessarily grow to meet either the higher left wall or the maximal pool.  Therefore this pool cannot exist.
+- Similarly, any pools to the right of these maximal pools will necessarily be monotonically non-increasing in height, and these pools with take the height of their right-most defining edge.
+- Note that if two or more maximal pools exist, the left-most maximal pool will take the height of its left-most defining edge, and similarly for the right-most maximal pool.  Any other maximal pools can take the height of either edge.
+- Among the maximal pools, there can be at most one defining edge on the left, and at most one defining edge on the right, that are of a height greater than the collective height of the pools.
+  - Proof by contrapositive:
+    - If there did exist more than one of each of these edges, then the pool between them would necessarily grow to fill the space between them and thus the assumed maximal pools weren't actually maximal.
+
+# Solution
+
+For building up this solution for any given topography, we are going to perform simultaneous scans starting from the left and right sides of the topography, searching for the defining edges of the pools.  The searches will catalogue any new local maximums found, and as thus the searches will culminate in either:
+- A single maximum height
+- Two seperate maximum heights of equal value.
+
+From there, the searches will backfill to fill any pools from the found definiting edges, in addition to possibly filling the central maximal pool(s) if two seperate but equal maximims were found.
