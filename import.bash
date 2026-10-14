@@ -20,6 +20,7 @@ die() { msg "${1:-}"; exit 1; }
 #####
 
 copy_git_repo() {
+    set -e
     local source="${1:-}"
 
     if [[ -z "${source}" ]]; then
@@ -28,7 +29,6 @@ copy_git_repo() {
 
     # Make the temporary repo
     TMP_REPO=$(mktemp -d)
-    trap 'rm -rf "$TMP_REPO"' EXIT
 
     git clone "${source}" "${TMP_REPO}"
 
@@ -36,6 +36,7 @@ copy_git_repo() {
 }
 
 rewrite_git_history() {
+    set -e
     local tmp_repo="${1:-}"
     local target_path="${2:-}"
 
@@ -50,33 +51,42 @@ rewrite_git_history() {
     local target_name=$(basename "${target_path}")
 
     cd "${tmp_repo}"
+    ls
 
-    local py_rename='re.sub(r"^([^ :]+):", r"\1('${target_name}')", "feat:" + message if not re.fullmatch(r"^[^ :]+:", message) else message)'
+    local py_rename='return re.sub(rb"^([a-zA-Z0-9_-]+)(\([^)]+\))?:", rb"\1('"${target_name}"'):", message if re.match(rb"^[a-zA-Z0-9_-]+(\([^)]+\))?:", message) else b"feat: " + message)'
     git filter-repo --to-subdirectory-filter "${target_path}" --message-callback "${py_rename}"
 }
 
 merge_tmp_repo() {
+    set -e
     local tmp_repo="${1:-}"
     local target_path="${2:-}"
+    local dest_repo="${3:-}"
 
     if [[ -z "${tmp_repo}" ]]; then
-        die "Error: rewrite_git_history is missing tmp repo"
+        die "Error: merge_tmp_repo is missing tmp repo"
     fi
 
     if [[ -z "${target_path}" ]]; then
-        die "Error: rewrite_git_history is missing target path"
+        die "Error: merge_tmp_repo is missing target path"
     fi
 
     local target_name=$(basename "${target_path}")
+    local branch
+    branch=$(git -C "${tmp_repo}" branch --show-current 2>/dev/null || true)
+    if [[ -z "${branch}" ]]; then
+        branch=$(git -C "${tmp_repo}" symbolic-ref --short HEAD 2>/dev/null || echo "master")
+    fi
 
     cd "${DIR}"
 
+    git remote remove tmp-remote 2>/dev/null || true
     git remote add tmp-remote "${tmp_repo}"
     git fetch tmp-remote
 
-    git merge temp-remote/main --allow-unrelated-histories -m "Merge ${target_name}"
+    git merge "tmp-remote/${branch}" --allow-unrelated-histories -m "Merge ${target_name}"
 
-    git remote remove temp-remote
+    git remote remove tmp-remote
 }
 
 main() {
@@ -103,15 +113,13 @@ main() {
         die "Error: source repo is not a git repository: ${source}"
     fi
 
-    # Get the directory pointed to
-    local full_dest=$(realpath "${dest}" 2>&1 || realpath "${DIR}/${dest}")
+    mkdir -p "${DIR}/${dest}"
 
-    # Ensure full_dest points to a directory within this repo
-    if [[ "${dest}" != "${DIR}"/* ]]; then
-        die "Error: local destination path must be in this repository."
-    fi
+    TMP_REPO=$(copy_git_repo "${source}")
+    trap 'rm -rf "$TMP_REPO"' exit
 
-    local relative_dest="${dest#${DIR}/}"
+    rewrite_git_history "${TMP_REPO}" "${dest}"
+    merge_tmp_repo "${TMP_REPO}" "${dest}"
 }
 
 # Run main if script is invoked directly
