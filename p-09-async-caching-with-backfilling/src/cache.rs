@@ -217,8 +217,21 @@ impl<K, V> MultiThreadedCache<K, V> {
                             leader.send(value.clone());
                             return Ok(value);
                         }
-                        Ok(Err(error)) => return Err(error),
-                        Err(panic) => panic::resume_unwind(panic),
+                        Ok(Err(error)) => {
+                            {
+                                let mut map = self.cache.lock().expect("Lock should be healthy.");
+                                map.remove(&key);
+                            }
+
+                            return Err(error)
+                        },
+                        Err(panic) => {
+                            {
+                                let mut map = self.cache.lock().expect("Lock should be healthy.");
+                                map.remove(&key);
+                            }
+                            panic::resume_unwind(panic)
+                        }
                     }
                 }
                 // If we need to wait, wait and see what the result is
