@@ -223,8 +223,8 @@ impl<K, V> MultiThreadedCache<K, V> {
                                 map.remove(&key);
                             }
 
-                            return Err(error)
-                        },
+                            return Err(error);
+                        }
                         Err(panic) => {
                             {
                                 let mut map = self.cache.lock().expect("Lock should be healthy.");
